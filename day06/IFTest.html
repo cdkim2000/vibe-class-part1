@@ -15,14 +15,11 @@
     <script>
 
         function getResult() {
-
-            //선택자를 사용해서 html 값을 가져오기
-            //선택자는 css 와 동일(id:#, class명은 . ...)
             const score = document.querySelector('#score');
 
             if(score.value.trim().length === 0) {
                 alert('값을 입력하세요.');
-                return;  // 함수종료                
+                return;
             }
 
             if(score.value >= 65) {

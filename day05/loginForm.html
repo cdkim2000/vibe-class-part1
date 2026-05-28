@@ -65,21 +65,16 @@
     </div>
     <script>
         function login() {
-            // html 값을 -> 자바스크립트로 가져올 수 있음
-            // 자바스크립트의 결과 값 -> html 영역에 적용 가능
-            // html 영역을 자바스크립트에서는 document 라는 객체를 사요
             const userID = document.getElementById('userID');
             const passwd = document.getElementById('passwd');
 
             if(userID.value.trim().length === 0) {
                 alert('아이디를 입력하십시요.');
-                //함수끝내기
                 return;
             }
 
             if(passwd.value.trim().length === 0) {
                 alert('패스워드를 입력하십시요.');
-                //함수끝내기
                 return;
             }
 
