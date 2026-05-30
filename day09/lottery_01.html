@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🎱 로또 번호 추천</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ── 리셋 & 변수 ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d0f1a;
+      --surface:   #161929;
+      --surface2:  #1e2238;
+      --border:    #2a2f4a;
+      --text:      #e8ecff;
+      --muted:     #6b7280;
+      --accent:    #6c63ff;
+
+      /* 로또 공식 색상 */
+      --y: #FBC400;   /* 1-10  노랑 */
+      --b: #069EDB;   /* 11-20 파랑 */
+      --r: #FF6151;   /* 21-30 빨강 */
+      --g: #AAAAAA;   /* 31-40 회색 */
+      --gr: #00C851;  /* 41-45 초록 */
+      --gold: #FFD700;
+
+      --radius: 12px;
+      --ball: 48px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Noto Sans KR', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 16px 60px;
+    }
+
+    /* ── 배경 장식 ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 40% at 20% 10%, rgba(108,99,255,.18) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 30% at 80% 80%, rgba(6,158,219,.12) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrap { position: relative; z-index: 1; width: 100%; max-width: 780px; }
+
+    /* ── 헤더 ── */
+    header {
+      text-align: center;
+      padding: 40px 0 28px;
+    }
+    header h1 {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: clamp(2rem, 6vw, 3rem);
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, #fff 30%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    header p {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: .85rem;
+    }
+    .round-badge {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 4px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: .78rem;
+      color: var(--accent);
+      letter-spacing: .5px;
+    }
+
+    /* ── 카드 ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    /* ── 모드 토글 ── */
+    .mode-toggle {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .mode-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: 2px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: .85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .mode-btn.active-exclude {
+      border-color: #ff6b6b;
+      background: rgba(255,107,107,.12);
+      color: #ff6b6b;
+    }
+    .mode-btn.active-pick {
+      border-color: var(--gold);
+      background: rgba(255,215,0,.1);
+      color: var(--gold);
+    }
+
+    /* ── 번호 그리드 ── */
+    .number-grid {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 7px;
+    }
+    @media (max-width: 500px) {
+      .number-grid { grid-template-columns: repeat(7, 1fr); gap: 5px; }
+    }
+
+    .num-btn {
+      aspect-ratio: 1;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      background: var(--surface2);
+      color: #fff;
+      font-weight: 700;
+      font-size: clamp(.65rem, 2vw, .82rem);
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s, opacity .15s;
+      position: relative;
+      font-family: 'Noto Sans KR', sans-serif;
+    }
+    .num-btn:hover { transform: scale(1.12); }
+
+    /* 범위별 색상 */
+    .num-btn.range-y  { background: var(--y);  color: #222; }
+    .num-btn.range-b  { background: var(--b);  color: #fff; }
+    .num-btn.range-r  { background: var(--r);  color: #fff; }
+    .num-btn.range-g  { background: var(--g);  color: #fff; }
+    .num-btn.range-gr { background: var(--gr); color: #fff; }
+
+    /* 제외 상태 */
+    .num-btn.excluded {
+      background: #2a2a2a !important;
+      color: #444 !important;
+      text-decoration: line-through;
+      opacity: .55;
+      border-color: #333;
+    }
+
+    /* 추천(고정) 상태 */
+    .num-btn.picked {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(255,215,0,.35), 0 0 14px rgba(255,215,0,.4);
+    }
+    .num-btn.picked::after {
+      content: '★';
+      position: absolute;
+      top: -5px; right: -5px;
+      font-size: .5rem;
+      background: var(--gold);
+      color: #222;
+      border-radius: 50%;
+      width: 14px; height: 14px;
+      display: flex; align-items: center; justify-content: center;
+      line-height: 1;
+    }
+
+    /* ── 선택 현황 ── */
+    .status-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .status-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      min-height: 56px;
+    }
+    .status-box .label {
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+    .status-box.excl .label { color: #ff6b6b; }
+    .status-box.pick .label { color: var(--gold); }
+
+    .badge-list { display: flex; flex-wrap: wrap; gap: 5px; }
+    .badge {
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: .72rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    .badge:hover { opacity: .7; }
+    .badge.excl { background: rgba(255,107,107,.2); color: #ff6b6b; border: 1px solid rgba(255,107,107,.4); }
+    .badge.pick { background: rgba(255,215,0,.15); color: var(--gold); border: 1px solid rgba(255,215,0,.4); }
+    .status-empty { color: var(--muted); font-size: .75rem; }
+
+    /* ── 게임 수 & 버튼 ── */
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .game-count {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: .85rem;
+    }
+    .game-count span { color: var(--muted); font-size: .78rem; }
+    .cnt-btn {
+      background: var(--border);
+      border: none;
+      color: #fff;
+      width: 26px; height: 26px;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s;
+    }
+    .cnt-btn:hover { background: var(--accent); }
+    #gameCount { font-weight: 700; font-size: 1.05rem; min-width: 20px; text-align: center; }
+
+    .btn-generate {
+      flex: 1;
+      padding: 14px;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, var(--accent), #a78bfa);
+      color: #fff;
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 1.1rem;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s, opacity .2s;
+      box-shadow: 0 4px 20px rgba(108,99,255,.45);
+    }
+    .btn-generate:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(108,99,255,.6); }
+    .btn-generate:disabled { opacity: .4; cursor: not-allowed; }
+
+    .btn-reset {
+      padding: 14px 18px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: .85rem;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-reset:hover { border-color: #ff6b6b; color: #ff6b6b; }
+
+    /* ── 경고 메시지 ── */
+    .warn-msg {
+      display: none;
+      background: rgba(255,107,107,.12);
+      border: 1px solid rgba(255,107,107,.35);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #ff6b6b;
+      font-size: .82rem;
+      margin-bottom: 12px;
+    }
+    .warn-msg.show { display: block; }
+
+    /* ── 결과 영역 ── */
+    .results-area { display: flex; flex-direction: column; gap: 14px; }
+
+    .game-row {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: slideIn .4s ease both;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .game-label {
+      font-size: .7rem;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 1px;
+      min-width: 28px;
+    }
+    .balls { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
+
+    .ball {
+      width: var(--ball);
+      height: var(--ball);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: .9rem;
+      position: relative;
+      animation: popIn .35s cubic-bezier(.34,1.56,.64,1) both;
+      box-shadow: inset 0 -3px 6px rgba(0,0,0,.25), 0 3px 8px rgba(0,0,0,.3);
+    }
+    .ball.range-y  { background: radial-gradient(circle at 35% 35%, #ffe066, var(--y)); color: #222; }
+    .ball.range-b  { background: radial-gradient(circle at 35% 35%, #5ad4ff, var(--b)); color: #fff; }
+    .ball.range-r  { background: radial-gradient(circle at 35% 35%, #ff9f96, var(--r)); color: #fff; }
+    .ball.range-g  { background: radial-gradient(circle at 35% 35%, #d0d0d0, var(--g)); color: #fff; }
+    .ball.range-gr { background: radial-gradient(circle at 35% 35%, #5fffaa, var(--gr)); color: #222; }
+
+    .ball.is-pick {
+      outline: 3px solid var(--gold);
+      outline-offset: 2px;
+      box-shadow: inset 0 -3px 6px rgba(0,0,0,.25), 0 0 14px rgba(255,215,0,.55);
+    }
+    .ball.is-pick::after {
+      content: '★';
+      position: absolute;
+      top: -6px; right: -6px;
+      background: var(--gold);
+      color: #222;
+      border-radius: 50%;
+      font-size: .45rem;
+      width: 14px; height: 14px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--muted);
+      padding: 6px 10px;
+      font-size: .72rem;
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .copy-btn.copied { border-color: var(--gr); color: var(--gr); }
+
+    .results-empty {
+      text-align: center;
+      padding: 30px 0;
+      color: var(--muted);
+      font-size: .88rem;
+    }
+    .results-empty .icon { font-size: 2.5rem; margin-bottom: 8px; }
+
+    /* ── 반응형 ── */
+    @media (max-width: 480px) {
+      :root { --ball: 40px; }
+      .status-row { grid-template-columns: 1fr; }
+      .controls { flex-wrap: wrap; }
+      .btn-generate { order: -1; flex: 100%; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 헤더 -->
+  <header>
+    <h1>🎱 로또 번호 추천</h1>
+    <p>수동 · 반자동 번호 생성 시스템</p>
+    <div class="round-badge" id="roundBadge">제 ??? 회차</div>
+  </header>
+
+  <!-- 번호 선택 카드 -->
+  <div class="card">
+    <div class="card-title">번호 선택 모드</div>
+
+    <!-- 모드 토글 -->
+    <div class="mode-toggle">
+      <button class="mode-btn active-exclude" id="modeExclude" onclick="setMode('exclude')">
+        ❌ 제외 번호 모드
+      </button>
+      <button class="mode-btn" id="modePick" onclick="setMode('pick')">
+        ⭐ 추천 번호 모드
+      </button>
+    </div>
+
+    <!-- 번호 그리드 -->
+    <div class="number-grid" id="numberGrid"></div>
+  </div>
+
+  <!-- 선택 현황 -->
+  <div class="status-row">
+    <div class="status-box excl">
+      <div class="label">❌ 제외 번호</div>
+      <div class="badge-list" id="excludedList">
+        <span class="status-empty">없음</span>
+      </div>
+    </div>
+    <div class="status-box pick">
+      <div class="label">⭐ 추천 번호</div>
+      <div class="badge-list" id="pickedList">
+        <span class="status-empty">없음</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 경고 -->
+  <div class="warn-msg" id="warnMsg"></div>
+
+  <!-- 컨트롤 -->
+  <div class="controls">
+    <div class="game-count">
+      <span>게임 수</span>
+      <button class="cnt-btn" onclick="changeCount(-1)">−</button>
+      <span id="gameCount">5</span>
+      <button class="cnt-btn" onclick="changeCount(1)">+</button>
+    </div>
+    <button class="btn-generate" id="btnGenerate" onclick="generate()">🎰 번호 추천</button>
+    <button class="btn-reset" onclick="resetAll()">초기화</button>
+  </div>
+
+  <!-- 결과 -->
+  <div class="card">
+    <div class="card-title">추천 결과</div>
+    <div class="results-area" id="resultsArea">
+      <div class="results-empty">
+        <div class="icon">🎱</div>
+        <div>번호 추천 버튼을 눌러주세요</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  /* ── 상태 ── */
+  const state = {
+    mode: 'exclude',      // 'exclude' | 'pick'
+    excluded: new Set(),
+    picked: new Set(),
+    gameCount: 5,
+  };
+
+  /* ── 번호 색상 ── */
+  function rangeClass(n) {
+    if (n <= 10) return 'range-y';
+    if (n <= 20) return 'range-b';
+    if (n <= 30) return 'range-r';
+    if (n <= 40) return 'range-g';
+    return 'range-gr';
+  }
+
+  /* ── 그리드 렌더 ── */
+  function buildGrid() {
+    const grid = document.getElementById('numberGrid');
+    grid.innerHTML = '';
+    for (let i = 1; i <= 45; i++) {
+      const btn = document.createElement('button');
+      btn.className = `num-btn ${rangeClass(i)}`;
+      btn.textContent = i;
+      btn.dataset.n = i;
+      btn.addEventListener('click', () => toggleNumber(i));
+      grid.appendChild(btn);
+    }
+  }
+
+  function updateGrid() {
+    document.querySelectorAll('.num-btn').forEach(btn => {
+      const n = +btn.dataset.n;
+      btn.classList.remove('excluded', 'picked');
+      if (state.excluded.has(n)) btn.classList.add('excluded');
+      else if (state.picked.has(n)) btn.classList.add('picked');
+    });
+  }
+
+  /* ── 번호 토글 ── */
+  function toggleNumber(n) {
+    if (state.mode === 'exclude') {
+      if (state.picked.has(n)) return; // pick과 중복 불가
+      if (state.excluded.has(n)) {
+        state.excluded.delete(n);
+      } else {
+        if (state.excluded.size >= 39) { showWarn('제외 번호는 최대 39개까지 선택할 수 있습니다.'); return; }
+        state.excluded.add(n);
+      }
+    } else {
+      if (state.excluded.has(n)) state.excluded.delete(n); // 제외에서 자동 제거
+      if (state.picked.has(n)) {
+        state.picked.delete(n);
+      } else {
+        if (state.picked.size >= 5) { showWarn('추천 번호는 최대 5개까지 선택할 수 있습니다.'); return; }
+        state.picked.add(n);
+      }
+    }
+    hideWarn();
+    updateGrid();
+    updateStatus();
+    updateGenerateBtn();
+  }
+
+  /* ── 상태 표시 ── */
+  function updateStatus() {
+    renderBadges('excludedList', [...state.excluded].sort((a,b)=>a-b), 'excl', 'exclude');
+    renderBadges('pickedList',  [...state.picked].sort((a,b)=>a-b),  'pick', 'pick');
+  }
+
+  function renderBadges(elId, nums, cls, type) {
+    const el = document.getElementById(elId);
+    if (!nums.length) { el.innerHTML = '<span class="status-empty">없음</span>'; return; }
+    el.innerHTML = nums.map(n =>
+      `<span class="badge ${cls}" onclick="removeBadge(${n},'${type}')">${n} ✕</span>`
+    ).join('');
+  }
+
+  function removeBadge(n, type) {
+    if (type === 'exclude') state.excluded.delete(n);
+    else state.picked.delete(n);
+    updateGrid(); updateStatus(); updateGenerateBtn();
+  }
+
+  /* ── 모드 전환 ── */
+  function setMode(mode) {
+    state.mode = mode;
+    document.getElementById('modeExclude').className = 'mode-btn' + (mode === 'exclude' ? ' active-exclude' : '');
+    document.getElementById('modePick').className    = 'mode-btn' + (mode === 'pick'    ? ' active-pick' : '');
+  }
+
+  /* ── 게임 수 ── */
+  function changeCount(delta) {
+    state.gameCount = Math.min(10, Math.max(1, state.gameCount + delta));
+    document.getElementById('gameCount').textContent = state.gameCount;
+  }
+
+  /* ── 생성 버튼 활성화 ── */
+  function updateGenerateBtn() {
+    const pool = 45 - state.excluded.size;
+    const btn  = document.getElementById('btnGenerate');
+    const ok   = pool >= 6 && state.picked.size <= 5;
+    btn.disabled = !ok;
+    if (!ok) showWarn(pool < 6 ? '후보 번호가 6개 미만입니다. 제외 번호를 줄여주세요.' : '추천 번호는 5개를 초과할 수 없습니다.');
+    else hideWarn();
+  }
+
+  /* ── 번호 생성 알고리즘 ── */
+  function generate() {
+    // 후보 풀
+    const pool = [];
+    for (let i = 1; i <= 45; i++) {
+      if (!state.excluded.has(i) && !state.picked.has(i)) pool.push(i);
+    }
+    if (pool.length + state.picked.size < 6) {
+      showWarn('후보 번호가 부족합니다.'); return;
+    }
+
+    const area = document.getElementById('resultsArea');
+    area.innerHTML = '';
+
+    for (let g = 0; g < state.gameCount; g++) {
+      // 셔플 (Fisher-Yates)
+      const shuffled = [...pool];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      const needed = 6 - state.picked.size;
+      const picks  = shuffled.slice(0, needed);
+      const result = [...state.picked, ...picks].sort((a,b) => a - b);
+
+      area.appendChild(createGameRow(g + 1, result));
+    }
+  }
+
+  function createGameRow(idx, numbers) {
+    const row = document.createElement('div');
+    row.className = 'game-row';
+    row.style.animationDelay = `${(idx-1) * 0.07}s`;
+
+    const label = document.createElement('div');
+    label.className = 'game-label';
+    label.textContent = `${String.fromCharCode(64+idx)}`;
+
+    const balls = document.createElement('div');
+    balls.className = 'balls';
+    numbers.forEach((n, i) => {
+      const ball = document.createElement('div');
+      ball.className = `ball ${rangeClass(n)}` + (state.picked.has(n) ? ' is-pick' : '');
+      ball.textContent = n;
+      ball.style.animationDelay = `${(idx-1)*0.07 + i*0.06}s`;
+      balls.appendChild(ball);
+    });
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.textContent = '복사';
+    copyBtn.onclick = () => {
+      navigator.clipboard.writeText(numbers.join(', ')).then(() => {
+        copyBtn.textContent = '✓ 복사됨';
+        copyBtn.classList.add('copied');
+        setTimeout(() => { copyBtn.textContent = '복사'; copyBtn.classList.remove('copied'); }, 1800);
+      });
+    };
+
+    row.append(label, balls, copyBtn);
+    return row;
+  }
+
+  /* ── 초기화 ── */
+  function resetAll() {
+    state.excluded.clear();
+    state.picked.clear();
+    state.gameCount = 5;
+    document.getElementById('gameCount').textContent = 5;
+    updateGrid(); updateStatus();
+    document.getElementById('resultsArea').innerHTML = `
+      <div class="results-empty">
+        <div class="icon">🎱</div>
+        <div>번호 추천 버튼을 눌러주세요</div>
+      </div>`;
+    hideWarn();
+    document.getElementById('btnGenerate').disabled = false;
+  }
+
+  /* ── 경고 ── */
+  function showWarn(msg) {
+    const el = document.getElementById('warnMsg');
+    el.textContent = '⚠️  ' + msg;
+    el.classList.add('show');
+  }
+  function hideWarn() {
+    document.getElementById('warnMsg').classList.remove('show');
+  }
+
+  /* ── 회차 계산 (2002-12-07 1회차 기준) ── */
+  function calcRound() {
+    const start = new Date('2002-12-07');
+    const now   = new Date();
+    const weeks = Math.floor((now - start) / (7 * 24 * 60 * 60 * 1000)) + 1;
+    document.getElementById('roundBadge').textContent = `제 ${weeks.toLocaleString()} 회차`;
+  }
+
+  /* ── 초기 실행 ── */
+  buildGrid();
+  calcRound();
+</script>
+</body>
+</html>
